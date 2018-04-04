@@ -24,10 +24,13 @@ import (
 
 	"github.com/golang/glog"
 
+	"k8s.io/client-go/kubernetes"
+	crclient "k8s.io/cluster-registry/pkg/client/clientset_generated/clientset"
 	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce"
 
 	"k8s.io/ingress-gce/pkg/context"
 	"k8s.io/ingress-gce/pkg/controller"
+	"k8s.io/ingress-gce/pkg/mci"
 	neg "k8s.io/ingress-gce/pkg/neg"
 
 	"k8s.io/ingress-gce/cmd/glbc/app"
@@ -58,9 +61,19 @@ func main() {
 
 	glog.V(2).Infof("Flags = %+v", flags.F)
 
-	kubeClient, err := app.NewKubeClient()
+	kubeConfig, err := app.NewKubeConfig()
+	if err != nil {
+		glog.Fatalf("Failed to create kubernetes client config: %v", err)
+	}
+
+	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
 		glog.Fatalf("Failed to create kubernetes client: %v", err)
+	}
+
+	crClient, err := crclient.NewForConfig(kubeConfig)
+	if err != nil {
+		glog.Fatalf("Failed to create Cluster Registry client: %v", err)
 	}
 
 	namer, err := app.NewNamer(kubeClient, flags.F.ClusterName, controller.DefaultFirewallName)
@@ -76,8 +89,9 @@ func main() {
 	}
 
 	enableNEG := cloud.AlphaFeatureGate.Enabled(gce.AlphaFeatureNetworkEndpointGroup)
+	enableMCI := flags.F.MCIMode
 	stopCh := make(chan struct{})
-	ctx := context.NewControllerContext(kubeClient, flags.F.WatchNamespace, flags.F.ResyncPeriod, enableNEG)
+	ctx := context.NewControllerContext(kubeClient, crClient, flags.F.WatchNamespace, flags.F.ResyncPeriod, enableNEG, enableMCI)
 	lbc, err := controller.NewLoadBalancerController(kubeClient, stopCh, ctx, clusterManager, enableNEG)
 	if err != nil {
 		glog.Fatalf("Error creating load balancer controller: %v", err)
@@ -93,6 +107,12 @@ func main() {
 		negController, _ := neg.NewController(kubeClient, cloud, ctx, lbc.Translator, namer, flags.F.ResyncPeriod)
 		go negController.Run(stopCh)
 		glog.V(0).Infof("negController started")
+	}
+
+	if enableMCI {
+		mciController, _ := mci.NewController(crClient, ctx, flags.F.ResyncPeriod)
+		go mciController.Run(stopCh)
+		glog.V(0).Infof("Multi-Cluster Ingress Controller started")
 	}
 
 	go app.RunHTTPServer(lbc)

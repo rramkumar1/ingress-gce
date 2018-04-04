@@ -29,29 +29,36 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
+	crclient "k8s.io/cluster-registry/pkg/client/clientset_generated/clientset"
+	crinformerv1alpha1 "k8s.io/cluster-registry/pkg/client/informers_generated/externalversions/clusterregistry/v1alpha1"
 )
 
 // ControllerContext holds
 type ControllerContext struct {
 	kubeClient kubernetes.Interface
+	crClient   crclient.Interface
 
 	IngressInformer  cache.SharedIndexInformer
 	ServiceInformer  cache.SharedIndexInformer
 	PodInformer      cache.SharedIndexInformer
 	NodeInformer     cache.SharedIndexInformer
 	EndpointInformer cache.SharedIndexInformer
+	ClusterInformer  cache.SharedIndexInformer
+
+	// TODO(rramkumar): Add informer for service extension CRD.
 
 	// Map of namespace => record.EventRecorder.
 	recorders map[string]record.EventRecorder
 }
 
 // NewControllerContext returns a new shared set of informers.
-func NewControllerContext(kubeClient kubernetes.Interface, namespace string, resyncPeriod time.Duration, enableEndpointsInformer bool) *ControllerContext {
+func NewControllerContext(kubeClient kubernetes.Interface, crClient crclient.Interface, namespace string, resyncPeriod time.Duration, enableEndpointsInformer, enableClusterInformer bool) *ControllerContext {
 	newIndexer := func() cache.Indexers {
 		return cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 	}
 	context := &ControllerContext{
 		kubeClient:      kubeClient,
+		crClient:        crClient,
 		IngressInformer: informerv1beta1.NewIngressInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
 		ServiceInformer: informerv1.NewServiceInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
 		PodInformer:     informerv1.NewPodInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
@@ -60,6 +67,9 @@ func NewControllerContext(kubeClient kubernetes.Interface, namespace string, res
 	}
 	if enableEndpointsInformer {
 		context.EndpointInformer = informerv1.NewEndpointsInformer(kubeClient, namespace, resyncPeriod, newIndexer())
+	}
+	if enableClusterInformer {
+		context.ClusterInformer = crinformerv1alpha1.NewClusterInformer(crClient, resyncPeriod, newIndexer())
 	}
 
 	return context
@@ -75,6 +85,9 @@ func (ctx *ControllerContext) HasSynced() bool {
 	}
 	if ctx.EndpointInformer != nil {
 		funcs = append(funcs, ctx.EndpointInformer.HasSynced)
+	}
+	if ctx.ClusterInformer != nil {
+		funcs = append(funcs, ctx.ClusterInformer.HasSynced)
 	}
 	for _, f := range funcs {
 		if !f() {
@@ -108,5 +121,8 @@ func (ctx *ControllerContext) Start(stopCh chan struct{}) {
 	go ctx.NodeInformer.Run(stopCh)
 	if ctx.EndpointInformer != nil {
 		go ctx.EndpointInformer.Run(stopCh)
+	}
+	if ctx.ClusterInformer != nil {
+		go ctx.ClusterInformer.Run(stopCh)
 	}
 }

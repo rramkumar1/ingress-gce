@@ -38,6 +38,7 @@ const (
 var (
 	// F are global flags for the controller.
 	F = struct {
+		MCIMode         bool
 		APIServerHost   string
 		ClusterName     string
 		ConfigFilePath  string
@@ -82,6 +83,8 @@ func EnabledFeatures() *Features {
 
 // Register flags with the command line parser.
 func Register() {
+	flag.BoolVar(&F.MCIMode, "mci-mode", false,
+		`If true, the controller will run as a Multi-Cluster Ingress (MCI) controller.`)
 	flag.StringVar(&F.APIServerHost, "apiserver-host", "",
 		`The address of the Kubernetes Apiserver to connect to in the format of
 protocol://address:port, e.g., http://localhost:8080. If not specified, the
