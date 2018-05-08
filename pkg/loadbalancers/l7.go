@@ -712,7 +712,7 @@ func (l *L7) UpdateUrlMap(ingressRules utils.GCEURLMap) error {
 	// backend, it applies to all host rules as well as to the urlmap itself.
 	// If it doesn't the urlmap might have a stale default, so replace it with
 	// glbc's default backend.
-	defaultBackendName := ingressRules.GetDefaultBackendName()
+	defaultBackendName := ingressRules.DefaultBackendName
 	if defaultBackendName != "" {
 		l.um.DefaultService = utils.BackendServiceRelativeResourcePath(defaultBackendName)
 	} else {
@@ -727,7 +727,7 @@ func (l *L7) UpdateUrlMap(ingressRules utils.GCEURLMap) error {
 	l.um.HostRules = []*compute.HostRule{}
 	l.um.PathMatchers = []*compute.PathMatcher{}
 
-	for hostname, urlToBackendName := range ingressRules {
+	for hostname, rules := range ingressRules.AllRules() {
 		// Create a host rule
 		// Create a path matcher
 		// Add all given endpoint:backends to pathRules in path matcher
@@ -745,10 +745,10 @@ func (l *L7) UpdateUrlMap(ingressRules utils.GCEURLMap) error {
 
 		// Longest prefix wins. For equal rules, first hit wins, i.e the second
 		// /foo rule when the first is deleted.
-		for expr, beName := range urlToBackendName {
-			beLink := utils.BackendServiceRelativeResourcePath(beName)
+		for _, rule := range rules {
+			beLink := utils.BackendServiceRelativeResourcePath(rule.BackendName)
 			pathMatcher.PathRules = append(
-				pathMatcher.PathRules, &compute.PathRule{Paths: []string{expr}, Service: beLink})
+				pathMatcher.PathRules, &compute.PathRule{Paths: []string{rule.Path}, Service: beLink})
 		}
 		l.um.PathMatchers = append(l.um.PathMatchers, pathMatcher)
 	}

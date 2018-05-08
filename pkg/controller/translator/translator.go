@@ -73,13 +73,15 @@ type GCE struct {
 
 // ToURLMap converts an ingress to a map of subdomain: url-regex: gce backend.
 func (t *GCE) ToURLMap(ing *extensions.Ingress) (utils.GCEURLMap, error) {
-	hostPathBackend := utils.GCEURLMap{}
+	urlMap := utils.GCEURLMap{}
 	for _, rule := range ing.Spec.Rules {
 		if rule.HTTP == nil {
 			glog.Errorf("Ignoring non http Ingress rule")
 			continue
 		}
-		pathToBackend := map[string]string{}
+		// Using a mapping of regex -> backend here ensures that we don't
+		// maintain duplicate rules.
+		rules := map[string]string{}
 		for _, p := range rule.HTTP.Paths {
 			backendName, err := t.toGCEBackendName(&p.Backend, ing.Namespace)
 			if err != nil {
@@ -103,14 +105,15 @@ func (t *GCE) ToURLMap(ing *extensions.Ingress) (utils.GCEURLMap, error) {
 			if path == "" {
 				path = loadbalancers.DefaultPath
 			}
-			pathToBackend[path] = backendName
+
+			rules[path] = backendName
 		}
 		// If multiple hostless rule sets are specified, last one wins
 		host := rule.Host
 		if host == "" {
 			host = loadbalancers.DefaultHost
 		}
-		hostPathBackend[host] = pathToBackend
+		urlMap.PutPathRulesForHost(host, rules)
 	}
 	var defaultBackendName string
 	if ing.Spec.Backend != nil {
@@ -131,7 +134,7 @@ func (t *GCE) ToURLMap(ing *extensions.Ingress) (utils.GCEURLMap, error) {
 	} else {
 		t.recorders.Recorder(ing.Namespace).Eventf(ing, api_v1.EventTypeNormal, "Service", "no user specified default backend, using system default")
 	}
-	hostPathBackend.PutDefaultBackendName(defaultBackendName)
+	urlMap.DefaultBackendName = defaultBackendName
 	return hostPathBackend, nil
 }
 

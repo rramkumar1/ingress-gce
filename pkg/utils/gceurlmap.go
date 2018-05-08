@@ -18,45 +18,51 @@ package utils
 
 import "fmt"
 
-// GCEURLMap is a nested map of hostname-> path regex-> backend name
-type GCEURLMap map[string]map[string]string
-
-// GetDefaultBackendName performs a destructive read and returns
-// the name of the default backend in the urlmap.
-func (g GCEURLMap) GetDefaultBackendName() string {
-	var name string
-	var exists bool
-	if h, ok := g[DefaultBackendKey]; ok {
-		if name, exists = h[DefaultBackendKey]; exists {
-			delete(h, DefaultBackendKey)
-		}
-		delete(g, DefaultBackendKey)
-	}
-	return name
+// GCEURLMap is a simple internal representation of compute.UrlMap
+type GCEURLMap struct {
+	// DefaultBackendName is the k8s name given to the default backend.
+	DefaultBackendName string
+	// hostRules is a mapping from a hostname to its associated rules.
+	hostRules map[string][]PathRule
 }
 
-// String implements the string interface for the GCEURLMap.
-func (g GCEURLMap) String() string {
+// PathRule encapsulates the information for a single path rule for a host.
+type PathRule struct {
+	// Path is a regex.
+	Path string
+	// BackendName is the k8s name given to the backend.
+	BackendName string
+}
+
+// PutPathRulesForHost adds path rules for a single hostname. Multiple calls
+// to this function with the same hostname will result in overwriting behavior.
+func (g *GCEURLMap) PutPathRulesForHost(hostname string, rules map[string]string) {
+	pathRules := make([]PathRule, 0)
+	for path, backendName := range rules {
+		pathRules = append(pathRules, PathRule{path, backendName})
+	}
+	g.hostRules[hostname] = pathRules
+}
+
+// AllRules returns every list of PathRule's for each hostname.
+func (g *GCEURLMap) AllRules() map[string][]PathRule {
+	return g.hostRules
+}
+
+// String dumps a readable version of the GCEURLMap.
+func (g *GCEURLMap) String() string {
 	msg := ""
-	for host, um := range g {
+	for host, rules := range g.hostRules {
 		msg += fmt.Sprintf("%v\n", host)
-		for url, beName := range um {
-			msg += fmt.Sprintf("\t%v: ", url)
-			if beName == "" {
+		for _, rule := range rules {
+			msg += fmt.Sprintf("\t%v: ", rule.Path)
+			if rule.BackendName == "" {
 				msg += fmt.Sprintf("No backend\n")
 			} else {
-				msg += fmt.Sprintf("%v\n", beName)
+				msg += fmt.Sprintf("%v\n", rule.BackendName)
 			}
 		}
 	}
+	msg += fmt.Sprintf("Default Backend: %v", g.DefaultBackendName)
 	return msg
-}
-
-// PutDefaultBackendName performs a destructive write replacing
-// the existing name of the default backend in the url map with
-// the name of the given backend.
-func (g GCEURLMap) PutDefaultBackendName(name string) {
-	g[DefaultBackendKey] = map[string]string{
-		DefaultBackendKey: name,
-	}
 }
