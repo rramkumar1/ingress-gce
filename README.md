@@ -381,7 +381,9 @@ The Ingress controller looks for a compatible readiness probe first, if it finds
 
 ## Frontend HTTPS
 
-For encrypted communication between the client to the load balancer, you need to specify a TLS private key and certificate to be used by the ingress controller.
+For encrypted communication between the client to the load balancer, you need to specify a TLS private key and certificate to be used by the ingress controller. 
+
+Version 1.1 of GLBC now supports (as a beta feature) using more than one SSL certificate in a single Ingress for request termination (aka Multiple-TLS). With this change, keep in mind that the upper limit is 10. 
 
 Ingress controller can read the private key and certificate from 2 sources:
 * Kubernetes [secret](http://kubernetes.io/docs/user-guide/secrets).
@@ -431,6 +433,25 @@ spec:
 
 This creates 2 GCE forwarding rules that use a single static IP. Both `:80` and `:443` will direct traffic to your backend, which serves HTTP requests on the target port mentioned in the Service associated with the Ingress.
 
+Specifying multiple secrets can be done as follows:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: no-rules-map
+spec:
+  tls:
+  - secretName: testsecret-1
+  - secretName: testsecret-2
+  - secretName: testsecret-3
+  backend:
+    serviceName: s1
+    servicePort: 80
+```
+
+Keep in mind that if you downgrade to a version that does not support Multiple-TLS (< 1.1), then you will need to manually clean up the created certificates in GCP.
+
 ### GCP SSL Cert
 
 For the ingress controller to use the certificate and private key stored in a
@@ -448,6 +469,21 @@ metadata:
 spec:
 ...
 ```
+
+Multiple pre-shared-certs can be specified as follows:
+
+```yaml
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  name: no-rules-map
+  annotations:
+      ingress.gcp.kubernetes.io/pre-shared-cert: "my-certificate-1, my-certificate-2, my-certificate-3"
+spec:
+...
+```
+
+It is important to point out that certificates specified via the annotation take precedence over certificates specified via the secret. In other words, if both methods are used, the certificates specified via the annotation will be used while the ones specified via the secret are ignored.
 
 #### Ingress cannot redirect HTTP to HTTPS
 
