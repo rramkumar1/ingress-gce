@@ -19,39 +19,21 @@ package controller
 import (
 	"strings"
 	"testing"
-	"time"
 
 	api_v1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
-	"k8s.io/client-go/kubernetes/fake"
-	backendconfigclient "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/fake"
 	"k8s.io/ingress-gce/pkg/test"
 	"k8s.io/ingress-gce/pkg/utils"
-
-	"k8s.io/ingress-gce/pkg/context"
 )
 
 var (
 	nodePortCounter = 30000
-	clusterUID      = "aaaaa"
 )
 
-// newLoadBalancerController create a loadbalancer controller.
-func newLoadBalancerController(t *testing.T, cm *fakeClusterManager) *LoadBalancerController {
-	kubeClient := fake.NewSimpleClientset()
-	backendConfigClient := backendconfigclient.NewSimpleClientset()
-
-	stopCh := make(chan struct{})
-	ctx := context.NewControllerContext(kubeClient, backendConfigClient, cm.fakeBackends, api_v1.NamespaceAll, 1*time.Minute, true, false)
-	lbc, err := NewLoadBalancerController(ctx, cm.ClusterManager, stopCh)
-	if err != nil {
-		t.Fatalf("%v", err)
-	}
-	lbc.hasSynced = func() bool { return true }
-
+func createDefaultBackendSvc() {
 	// Create the default-backend service.
 	defaultSvc := test.NewService(testDefaultBeSvcPort.ID.Service, api_v1.ServiceSpec{
 		Type: api_v1.ServiceTypeNodePort,
@@ -63,8 +45,6 @@ func newLoadBalancerController(t *testing.T, cm *fakeClusterManager) *LoadBalanc
 		},
 	})
 	addService(lbc, defaultSvc)
-
-	return lbc
 }
 
 func addService(lbc *LoadBalancerController, svc *api_v1.Service) {
@@ -110,8 +90,8 @@ func backend(name string, port intstr.IntOrString) extensions.IngressBackend {
 // TestIngressSyncError asserts that `sync` will bubble an error when an ingress cannot be synced
 // due to configuration problems.
 func TestIngressSyncError(t *testing.T) {
-	cm := NewFakeClusterManager(clusterUID, "")
-	lbc := newLoadBalancerController(t, cm)
+	lbc := newFakeLoadBalancerController()
+	createDefaultBackendSvc()
 
 	someBackend := backend("my-service", intstr.FromInt(80))
 	ing := test.NewIngress(types.NamespacedName{Name: "my-ingress", Namespace: "default"},
@@ -134,8 +114,8 @@ func TestIngressSyncError(t *testing.T) {
 // TestIngressCreateDelete asserts that `sync` will not return an error for a good ingress config
 // and will not return an error when the ingress is deleted.
 func TestIngressCreateDelete(t *testing.T) {
-	cm := NewFakeClusterManager(clusterUID, "")
-	lbc := newLoadBalancerController(t, cm)
+	lbc := newFakeLoadBalancerController()
+	createDefaultBackendSvc()
 
 	svc := test.NewService(types.NamespacedName{Name: "my-service", Namespace: "default"}, api_v1.ServiceSpec{
 		Type:  api_v1.ServiceTypeNodePort,
@@ -169,8 +149,8 @@ func TestIngressCreateDelete(t *testing.T) {
 
 // TestEnsureMCIngress asserts a multi-cluster ingress will result with correct status annotations.
 func TestEnsureMCIngress(t *testing.T) {
-	cm := NewFakeClusterManager(clusterUID, "")
-	lbc := newLoadBalancerController(t, cm)
+	lbc := newFakeLoadBalancerController()
+	createDefaultBackendSvc()
 
 	svc := test.NewService(types.NamespacedName{Name: "my-service", Namespace: "default"}, api_v1.ServiceSpec{
 		Type:  api_v1.ServiceTypeNodePort,

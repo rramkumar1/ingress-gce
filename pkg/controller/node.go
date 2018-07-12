@@ -37,15 +37,14 @@ type NodeController struct {
 	lister cache.Indexer
 	// queue is the TaskQueue used to manage the node worker updates.
 	queue utils.TaskQueue
-	// cm is the shared ClusterManager interface.
-	cm *ClusterManager
+	ctx   *context.ControllerContext
 }
 
 // NewNodeController returns a new node update controller.
-func NewNodeController(ctx *context.ControllerContext, cm *ClusterManager) *NodeController {
+func NewNodeController(ctx *context.ControllerContext) *NodeController {
 	c := &NodeController{
 		lister: ctx.NodeInformer.GetIndexer(),
-		cm:     cm,
+		ctx:    ctx,
 	}
 	c.queue = utils.NewPeriodicTaskQueue("nodes", c.sync)
 
@@ -76,5 +75,5 @@ func (c *NodeController) sync(key string) error {
 	if err != nil {
 		return err
 	}
-	return c.cm.instancePool.Sync(nodeNames)
+	return c.ctx.InstancePool.Sync(nodeNames)
 }

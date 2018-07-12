@@ -29,14 +29,21 @@ import (
 	"k8s.io/client-go/tools/record"
 	backendconfigclient "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned"
 	informerbackendconfig "k8s.io/ingress-gce/pkg/backendconfig/client/informers/externalversions/backendconfig/v1beta1"
+	"k8s.io/ingress-gce/pkg/backends"
+	"k8s.io/ingress-gce/pkg/firewalls"
+	"k8s.io/ingress-gce/pkg/healthchecks"
+	"k8s.io/ingress-gce/pkg/instances"
+	"k8s.io/ingress-gce/pkg/loadbalancers"
+	"k8s.io/ingress-gce/pkg/utils"
 	"k8s.io/kubernetes/pkg/cloudprovider/providers/gce"
 )
 
-// ControllerContext holds the state needed for the execution of the controller.
+// ControllerContext holds resources needed for the execution of all individual controllers.
 type ControllerContext struct {
 	KubeClient kubernetes.Interface
+	Cloud      *gce.GCECloud
 
-	Cloud *gce.GCECloud
+	ControllerContextConfig
 
 	IngressInformer       cache.SharedIndexInformer
 	ServiceInformer       cache.SharedIndexInformer
@@ -45,8 +52,12 @@ type ControllerContext struct {
 	NodeInformer          cache.SharedIndexInformer
 	EndpointInformer      cache.SharedIndexInformer
 
-	NEGEnabled           bool
-	BackendConfigEnabled bool
+	ClusterNamer  *utils.Namer
+	InstancePool  instances.NodePool
+	BackendPool   backends.BackendPool
+	L7Pool        loadbalancers.LoadBalancerPool
+	FirewallPool  firewalls.SingleFirewallPool
+	HealthChecker healthchecks.HealthChecker
 
 	healthChecks map[string]func() error
 	hcLock       sync.Mutex
@@ -55,39 +66,67 @@ type ControllerContext struct {
 	recorders map[string]record.EventRecorder
 }
 
-// NewControllerContext returns a new shared set of informers.
+// ControllerContextConfig holds configuration that is tunable via command-line args.
+type ControllerContextConfig struct {
+	NEGEnabled           bool
+	BackendConfigEnabled bool
+	// DefaultBackendSvcPortID is the ServicePortID for the system default backend.
+	DefaultBackendSvcPortID utils.ServicePortID
+
+	Namespace    string
+	ResyncPeriod time.Duration
+	// DefaultBackendHealthCheckPath is the default path used for the default backend health checks.
+	DefaultBackendHealthCheckPath string
+	// HealthCheckPath is the default path used for L7 health checks, eg: "/healthz".
+	HealthCheckPath string
+	// NodePortRanges are the ports to be whitelisted for the L7 firewall rule.
+	NodePortRanges []string
+}
+
+// NewControllerContext returns a new ControllerContext.
 func NewControllerContext(
 	kubeClient kubernetes.Interface,
 	backendConfigClient backendconfigclient.Interface,
+	namer *utils.Namer,
 	cloud *gce.GCECloud,
-	namespace string,
-	resyncPeriod time.Duration,
-	enableNEG bool,
-	enableBackendConfig bool) *ControllerContext {
+	config ControllerContextConfig) *ControllerContext {
 
 	newIndexer := func() cache.Indexers {
 		return cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}
 	}
 	context := &ControllerContext{
-		KubeClient:           kubeClient,
-		Cloud:                cloud,
-		IngressInformer:      informerv1beta1.NewIngressInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
-		ServiceInformer:      informerv1.NewServiceInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
-		PodInformer:          informerv1.NewPodInformer(kubeClient, namespace, resyncPeriod, newIndexer()),
-		NodeInformer:         informerv1.NewNodeInformer(kubeClient, resyncPeriod, newIndexer()),
-		NEGEnabled:           enableNEG,
-		BackendConfigEnabled: enableBackendConfig,
-		recorders:            map[string]record.EventRecorder{},
-		healthChecks:         make(map[string]func() error),
+		KubeClient: kubeClient,
+		Cloud:      cloud,
+		ControllerContextConfig: config,
+		IngressInformer:         informerv1beta1.NewIngressInformer(kubeClient, config.Namespace, config.ResyncPeriod, newIndexer()),
+		ServiceInformer:         informerv1.NewServiceInformer(kubeClient, config.Namespace, config.ResyncPeriod, newIndexer()),
+		PodInformer:             informerv1.NewPodInformer(kubeClient, config.Namespace, config.ResyncPeriod, newIndexer()),
+		NodeInformer:            informerv1.NewNodeInformer(kubeClient, config.ResyncPeriod, newIndexer()),
+		ClusterNamer:            namer,
+		recorders:               map[string]record.EventRecorder{},
+		healthChecks:            make(map[string]func() error),
 	}
-	if enableNEG {
-		context.EndpointInformer = informerv1.NewEndpointsInformer(kubeClient, namespace, resyncPeriod, newIndexer())
+	if context.NEGEnabled {
+		context.EndpointInformer = informerv1.NewEndpointsInformer(kubeClient, config.Namespace, config.ResyncPeriod, newIndexer())
 	}
-	if enableBackendConfig {
-		context.BackendConfigInformer = informerbackendconfig.NewBackendConfigInformer(backendConfigClient, namespace, resyncPeriod, newIndexer())
+	if context.BackendConfigEnabled {
+		context.BackendConfigInformer = informerbackendconfig.NewBackendConfigInformer(backendConfigClient, config.Namespace, config.ResyncPeriod, newIndexer())
 	}
 
+	context.InstancePool = instances.NewNodePool(cloud, namer)
+	context.HealthChecker = healthchecks.NewHealthChecker(cloud, config.HealthCheckPath, config.DefaultBackendHealthCheckPath, namer, config.DefaultBackendSvcPortID.Service)
+	context.BackendPool = backends.NewBackendPool(cloud, cloud, context.HealthChecker, context.InstancePool, namer, config.BackendConfigEnabled, true)
+	context.L7Pool = loadbalancers.NewLoadBalancerPool(cloud, namer)
+	context.FirewallPool = firewalls.NewFirewallPool(cloud, namer, gce.LoadBalancerSrcRanges(), config.NodePortRanges)
+
 	return context
+}
+
+// TODO(rramkumar): Figure out how to get rid of this or make it cleaner.
+// Note: Copied this over from the now dead cluster manager.
+func (ctx *ControllerContext) Init(zl instances.ZoneLister, pp backends.ProbeProvider) {
+	ctx.InstancePool.Init(zl)
+	ctx.BackendPool.Init(pp)
 }
 
 // HasSynced returns true if all relevant informers has been synced.
@@ -110,6 +149,20 @@ func (ctx *ControllerContext) HasSynced() bool {
 		}
 	}
 	return true
+}
+
+// Start all of the informers.
+func (ctx *ControllerContext) Start(stopCh chan struct{}) {
+	go ctx.IngressInformer.Run(stopCh)
+	go ctx.ServiceInformer.Run(stopCh)
+	go ctx.PodInformer.Run(stopCh)
+	go ctx.NodeInformer.Run(stopCh)
+	if ctx.EndpointInformer != nil {
+		go ctx.EndpointInformer.Run(stopCh)
+	}
+	if ctx.BackendConfigInformer != nil {
+		go ctx.BackendConfigInformer.Run(stopCh)
+	}
 }
 
 func (ctx *ControllerContext) Recorder(ns string) record.EventRecorder {
@@ -150,18 +203,4 @@ func (ctx *ControllerContext) HealthCheck() HealthCheckResults {
 	}
 
 	return healthChecks
-}
-
-// Start all of the informers.
-func (ctx *ControllerContext) Start(stopCh chan struct{}) {
-	go ctx.IngressInformer.Run(stopCh)
-	go ctx.ServiceInformer.Run(stopCh)
-	go ctx.PodInformer.Run(stopCh)
-	go ctx.NodeInformer.Run(stopCh)
-	if ctx.EndpointInformer != nil {
-		go ctx.EndpointInformer.Run(stopCh)
-	}
-	if ctx.BackendConfigInformer != nil {
-		go ctx.BackendConfigInformer.Run(stopCh)
-	}
 }
