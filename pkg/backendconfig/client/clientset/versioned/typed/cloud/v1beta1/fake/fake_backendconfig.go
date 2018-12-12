@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import (
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
 	testing "k8s.io/client-go/testing"
-	v1beta1 "k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1"
+	v1beta1 "k8s.io/ingress-gce/pkg/apis/cloud/v1beta1"
 )
 
 // FakeBackendConfigs implements BackendConfigInterface
@@ -93,6 +93,18 @@ func (c *FakeBackendConfigs) Create(backendConfig *v1beta1.BackendConfig) (resul
 func (c *FakeBackendConfigs) Update(backendConfig *v1beta1.BackendConfig) (result *v1beta1.BackendConfig, err error) {
 	obj, err := c.Fake.
 		Invokes(testing.NewUpdateAction(backendconfigsResource, c.ns, backendConfig), &v1beta1.BackendConfig{})
+
+	if obj == nil {
+		return nil, err
+	}
+	return obj.(*v1beta1.BackendConfig), err
+}
+
+// UpdateStatus was generated because the type contains a Status member.
+// Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
+func (c *FakeBackendConfigs) UpdateStatus(backendConfig *v1beta1.BackendConfig) (*v1beta1.BackendConfig, error) {
+	obj, err := c.Fake.
+		Invokes(testing.NewUpdateSubresourceAction(backendconfigsResource, "status", c.ns, backendConfig), &v1beta1.BackendConfig{})
 
 	if obj == nil {
 		return nil, err

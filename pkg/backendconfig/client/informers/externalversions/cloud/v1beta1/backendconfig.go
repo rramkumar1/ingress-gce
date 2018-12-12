@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,10 +25,10 @@ import (
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
 	cache "k8s.io/client-go/tools/cache"
-	backendconfigv1beta1 "k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1"
+	cloudv1beta1 "k8s.io/ingress-gce/pkg/apis/cloud/v1beta1"
 	versioned "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned"
 	internalinterfaces "k8s.io/ingress-gce/pkg/backendconfig/client/informers/externalversions/internalinterfaces"
-	v1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/listers/backendconfig/v1beta1"
+	v1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/listers/cloud/v1beta1"
 )
 
 // BackendConfigInformer provides access to a shared informer and lister for
@@ -70,7 +70,7 @@ func NewFilteredBackendConfigInformer(client versioned.Interface, namespace stri
 				return client.CloudV1beta1().BackendConfigs(namespace).Watch(options)
 			},
 		},
-		&backendconfigv1beta1.BackendConfig{},
+		&cloudv1beta1.BackendConfig{},
 		resyncPeriod,
 		indexers,
 	)
@@ -81,7 +81,7 @@ func (f *backendConfigInformer) defaultInformer(client versioned.Interface, resy
 }
 
 func (f *backendConfigInformer) Informer() cache.SharedIndexInformer {
-	return f.factory.InformerFor(&backendconfigv1beta1.BackendConfig{}, f.defaultInformer)
+	return f.factory.InformerFor(&cloudv1beta1.BackendConfig{}, f.defaultInformer)
 }
 
 func (f *backendConfigInformer) Lister() v1beta1.BackendConfigLister {

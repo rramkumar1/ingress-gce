@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -22,16 +22,12 @@ import (
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
-	cloudv1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1"
-	cloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1beta1"
+	cloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/cloud/v1beta1"
 )
 
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	CloudV1beta1() cloudv1beta1.CloudV1beta1Interface
-	CloudV1() cloudv1.CloudV1Interface
-	// Deprecated: please explicitly pick a version if possible.
-	Cloud() cloudv1.CloudV1Interface
 }
 
 // Clientset contains the clients for groups. Each group has exactly one
@@ -39,23 +35,11 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	cloudV1beta1 *cloudv1beta1.CloudV1beta1Client
-	cloudV1      *cloudv1.CloudV1Client
 }
 
 // CloudV1beta1 retrieves the CloudV1beta1Client
 func (c *Clientset) CloudV1beta1() cloudv1beta1.CloudV1beta1Interface {
 	return c.cloudV1beta1
-}
-
-// CloudV1 retrieves the CloudV1Client
-func (c *Clientset) CloudV1() cloudv1.CloudV1Interface {
-	return c.cloudV1
-}
-
-// Deprecated: Cloud retrieves the default version of CloudClient.
-// Please explicitly pick a version.
-func (c *Clientset) Cloud() cloudv1.CloudV1Interface {
-	return c.cloudV1
 }
 
 // Discovery retrieves the DiscoveryClient
@@ -78,10 +62,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
-	cs.cloudV1, err = cloudv1.NewForConfig(&configShallowCopy)
-	if err != nil {
-		return nil, err
-	}
 
 	cs.DiscoveryClient, err = discovery.NewDiscoveryClientForConfig(&configShallowCopy)
 	if err != nil {
@@ -95,7 +75,6 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.cloudV1beta1 = cloudv1beta1.NewForConfigOrDie(c)
-	cs.cloudV1 = cloudv1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
 	return &cs
@@ -105,7 +84,6 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.cloudV1beta1 = cloudv1beta1.New(c)
-	cs.cloudV1 = cloudv1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)
 	return &cs

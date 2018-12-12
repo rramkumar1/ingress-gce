@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,8 +24,7 @@ import (
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	serializer "k8s.io/apimachinery/pkg/runtime/serializer"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
-	cloudv1 "k8s.io/ingress-gce/pkg/apis/backendconfig/v1"
-	cloudv1beta1 "k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1"
+	cloudv1beta1 "k8s.io/ingress-gce/pkg/apis/cloud/v1beta1"
 )
 
 var scheme = runtime.NewScheme()
@@ -33,7 +32,6 @@ var codecs = serializer.NewCodecFactory(scheme)
 var parameterCodec = runtime.NewParameterCodec(scheme)
 var localSchemeBuilder = runtime.SchemeBuilder{
 	cloudv1beta1.AddToScheme,
-	cloudv1.AddToScheme,
 }
 
 // AddToScheme adds all types of this clientset into the given scheme. This allows composition

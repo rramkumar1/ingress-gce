@@ -20,26 +20,13 @@ set -o pipefail
 
 SCRIPT_ROOT=$(dirname ${BASH_SOURCE})/..
 CODEGEN_PKG=${CODEGEN_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -1 ./vendor/k8s.io/code-generator 2>/dev/null || echo ../code-generator)}
-OPENAPI_PKG=${GOPATH}/src/k8s.io/kube-openapi
+CONTROLLER_TOOLS_PKG=${CONTROLLER_TOOLS_PKG:-$(cd ${SCRIPT_ROOT}; ls -d -a ./vendor/sigs.k8s.io/controller-tools 2>/dev/null || echo ../../sigs.k8s.io/controller-tools)}
 
 ${CODEGEN_PKG}/generate-groups.sh \
   "deepcopy,client,informer,lister" \
   k8s.io/ingress-gce/pkg/backendconfig/client k8s.io/ingress-gce/pkg/apis \
-  "backendconfig:v1beta1 backendconfig:v1" \
+  "cloud:v1beta1" \
   --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
 
-echo "Generating openapi for v1beta1"
-go install ${OPENAPI_PKG}/cmd/openapi-gen
-${GOPATH}/bin/openapi-gen \
-  --output-file-base zz_generated.openapi \
-  --input-dirs k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1\
-  --output-package k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1 \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
-
-echo "Generating openapi for v1"
-go install ${OPENAPI_PKG}/cmd/openapi-gen
-${GOPATH}/bin/openapi-gen \
-  --output-file-base zz_generated.openapi \
-  --input-dirs k8s.io/ingress-gce/pkg/apis/backendconfig/v1\
-  --output-package k8s.io/ingress-gce/pkg/apis/backendconfig/v1 \
-  --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt
+echo "Generate CRD's via Kubebuilder"
+go run ${CONTROLLER_TOOLS_PKG}/cmd/controller-gen/main.go all

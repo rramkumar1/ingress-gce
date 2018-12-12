@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -25,10 +25,8 @@ import (
 	fakediscovery "k8s.io/client-go/discovery/fake"
 	"k8s.io/client-go/testing"
 	clientset "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned"
-	cloudv1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1"
-	fakecloudv1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1/fake"
-	cloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1beta1"
-	fakecloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1beta1/fake"
+	cloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/cloud/v1beta1"
+	fakecloudv1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/cloud/v1beta1/fake"
 )
 
 // NewSimpleClientset returns a clientset that will respond with the provided objects.
@@ -76,14 +74,4 @@ var _ clientset.Interface = &Clientset{}
 // CloudV1beta1 retrieves the CloudV1beta1Client
 func (c *Clientset) CloudV1beta1() cloudv1beta1.CloudV1beta1Interface {
 	return &fakecloudv1beta1.FakeCloudV1beta1{Fake: &c.Fake}
-}
-
-// CloudV1 retrieves the CloudV1Client
-func (c *Clientset) CloudV1() cloudv1.CloudV1Interface {
-	return &fakecloudv1.FakeCloudV1{Fake: &c.Fake}
-}
-
-// Cloud retrieves the CloudV1Client
-func (c *Clientset) Cloud() cloudv1.CloudV1Interface {
-	return &fakecloudv1.FakeCloudV1{Fake: &c.Fake}
 }

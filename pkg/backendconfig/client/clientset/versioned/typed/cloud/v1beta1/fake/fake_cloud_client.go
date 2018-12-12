@@ -1,5 +1,5 @@
 /*
-Copyright 2018 The Kubernetes Authors.
+Copyright 2019 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -21,20 +21,20 @@ package fake
 import (
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
-	v1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/backendconfig/v1"
+	v1beta1 "k8s.io/ingress-gce/pkg/backendconfig/client/clientset/versioned/typed/cloud/v1beta1"
 )
 
-type FakeCloudV1 struct {
+type FakeCloudV1beta1 struct {
 	*testing.Fake
 }
 
-func (c *FakeCloudV1) BackendConfigs(namespace string) v1.BackendConfigInterface {
+func (c *FakeCloudV1beta1) BackendConfigs(namespace string) v1beta1.BackendConfigInterface {
 	return &FakeBackendConfigs{c, namespace}
 }
 
 // RESTClient returns a RESTClient that is used to communicate
 // with API server by this client implementation.
-func (c *FakeCloudV1) RESTClient() rest.Interface {
+func (c *FakeCloudV1beta1) RESTClient() rest.Interface {
 	var ret *rest.RESTClient
 	return ret
 }
