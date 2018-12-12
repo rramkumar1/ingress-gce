@@ -55,6 +55,24 @@
   version = "v4.1.0"
 
 [[projects]]
+  name = "github.com/ghodss/yaml"
+  packages = ["."]
+  revision = "0ca9ea5df5451ffdf184b4428c902747c2c11cd7"
+  version = "v1.0.0"
+
+[[projects]]
+  name = "github.com/go-logr/logr"
+  packages = ["."]
+  revision = "9fb12b3b21c5415d16ac18dc5cd42c1cfdd40c4e"
+  version = "v0.1.0"
+
+[[projects]]
+  name = "github.com/go-logr/zapr"
+  packages = ["."]
+  revision = "03f06a783fbb7dfaf3f629c7825480e43a7105e6"
+  version = "v0.1.1"
+
+[[projects]]
   name = "github.com/go-openapi/jsonpointer"
   packages = ["."]
   revision = "ef5f0afec364d3b9396b7b77b43dbe26bf1f8004"
@@ -146,6 +164,18 @@
   version = "v0.5.1"
 
 [[projects]]
+  name = "github.com/hpcloud/tail"
+  packages = [
+    ".",
+    "ratelimiter",
+    "util",
+    "watch",
+    "winfile"
+  ]
+  revision = "a30252cb686a21eb2d0b98132633053ec2f7f1e5"
+  version = "v1.0.0"
+
+[[projects]]
   name = "github.com/imdario/mergo"
   packages = ["."]
   revision = "7c29201646fa3de8506f701213473dd407f19646"
@@ -196,6 +226,52 @@
   packages = ["."]
   revision = "4b7aa43c6742a2c18fdef89dd197aaae7dac7ccd"
   version = "1.0.1"
+
+[[projects]]
+  name = "github.com/onsi/ginkgo"
+  packages = [
+    ".",
+    "config",
+    "internal/codelocation",
+    "internal/containernode",
+    "internal/failer",
+    "internal/leafnodes",
+    "internal/remote",
+    "internal/spec",
+    "internal/spec_iterator",
+    "internal/specrunner",
+    "internal/suite",
+    "internal/testingtproxy",
+    "internal/writer",
+    "reporters",
+    "reporters/stenographer",
+    "reporters/stenographer/support/go-colorable",
+    "reporters/stenographer/support/go-isatty",
+    "types"
+  ]
+  revision = "eea6ad008b96acdaa524f5b409513bf062b500ad"
+  version = "v1.8.0"
+
+[[projects]]
+  name = "github.com/onsi/gomega"
+  packages = [
+    ".",
+    "format",
+    "gbytes",
+    "gexec",
+    "internal/assertion",
+    "internal/asyncassertion",
+    "internal/oraclematcher",
+    "internal/testingtsupport",
+    "matchers",
+    "matchers/support/goraph/bipartitegraph",
+    "matchers/support/goraph/edge",
+    "matchers/support/goraph/node",
+    "matchers/support/goraph/util",
+    "types"
+  ]
+  revision = "90e289841c1ed79b7a598a7cd9959750cb5e89e2"
+  version = "v1.5.0"
 
 [[projects]]
   name = "github.com/opencontainers/go-digest"
@@ -259,6 +335,31 @@
   version = "v1.0.3"
 
 [[projects]]
+  name = "go.uber.org/atomic"
+  packages = ["."]
+  revision = "1ea20fb1cbb1cc08cbd0d913a96dead89aa18289"
+  version = "v1.3.2"
+
+[[projects]]
+  name = "go.uber.org/multierr"
+  packages = ["."]
+  revision = "3c4937480c32f4c13a875a1829af76c98ca3d40a"
+  version = "v1.1.0"
+
+[[projects]]
+  name = "go.uber.org/zap"
+  packages = [
+    ".",
+    "buffer",
+    "internal/bufferpool",
+    "internal/color",
+    "internal/exit",
+    "zapcore"
+  ]
+  revision = "ff33455a0e382e8a81d14dd7c922020b6b5e7982"
+  version = "v1.9.1"
+
+[[projects]]
   branch = "master"
   name = "golang.org/x/crypto"
   packages = [
@@ -275,6 +376,9 @@
   packages = [
     "context",
     "context/ctxhttp",
+    "html",
+    "html/atom",
+    "html/charset",
     "http/httpguts",
     "http2",
     "http2/hpack",
@@ -308,12 +412,24 @@
   packages = [
     "collate",
     "collate/build",
+    "encoding",
+    "encoding/charmap",
+    "encoding/htmlindex",
+    "encoding/internal",
+    "encoding/internal/identifier",
+    "encoding/japanese",
+    "encoding/korean",
+    "encoding/simplifiedchinese",
+    "encoding/traditionalchinese",
+    "encoding/unicode",
     "internal/colltab",
     "internal/gen",
     "internal/tag",
     "internal/triegen",
     "internal/ucd",
+    "internal/utf8internal",
     "language",
+    "runes",
     "secure/bidirule",
     "transform",
     "unicode/bidi",
@@ -364,6 +480,13 @@
   version = "v1.4.0"
 
 [[projects]]
+  name = "gopkg.in/fsnotify.v1"
+  packages = ["."]
+  revision = "c2828203cd70a50dcccfb2761f8b1f8ceef9a8e9"
+  source = "https://github.com/fsnotify/fsnotify.git"
+  version = "v1.4.7"
+
+[[projects]]
   name = "gopkg.in/gcfg.v1"
   packages = [
     ".",
@@ -390,6 +513,12 @@
   ]
   revision = "628223f44a71f715d2881ea69afc795a1e9c01be"
   version = "v2.3.0"
+
+[[projects]]
+  branch = "v1"
+  name = "gopkg.in/tomb.v1"
+  packages = ["."]
+  revision = "dd632973f1e7218eb1089048e0798ec9ae7dceb8"
 
 [[projects]]
   name = "gopkg.in/warnings.v0"
@@ -529,6 +658,7 @@
   packages = [
     "discovery",
     "discovery/fake",
+    "dynamic",
     "informers",
     "informers/admissionregistration",
     "informers/admissionregistration/v1alpha1",
@@ -679,6 +809,7 @@
     "plugin/pkg/client/auth/oidc",
     "rest",
     "rest/watch",
+    "restmapper",
     "testing",
     "third_party/forked/golang/template",
     "tools/auth",
@@ -805,6 +936,30 @@
   revision = "21c4ce38f2a793ec01e925ddc31216500183b773"
 
 [[projects]]
+  name = "sigs.k8s.io/controller-runtime"
+  packages = [
+    "pkg/client",
+    "pkg/client/apiutil",
+    "pkg/client/config",
+    "pkg/envtest",
+    "pkg/envtest/printer",
+    "pkg/runtime/log",
+    "pkg/runtime/scheme"
+  ]
+  revision = "12d98582e72927b6cd0123e2b4e819f9341ce62c"
+  version = "v0.1.10"
+
+[[projects]]
+  name = "sigs.k8s.io/testing_frameworks"
+  packages = [
+    "integration",
+    "integration/addr",
+    "integration/internal"
+  ]
+  revision = "d348cb12705b516376e0c323bacca72b00a78425"
+  version = "v0.1.1"
+
+[[projects]]
   name = "sigs.k8s.io/yaml"
   packages = ["."]
   revision = "fd68e9863619f6ec2fdd8625fe1f02e7c877e480"
@@ -813,6 +968,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "bb0f723b8d6900c1ad71725694983f9763d9dd40c6b97df0de4a5b9a52b6426d"
+  inputs-digest = "10193b8dabfa1332db211da68279d92ee1cb020287e7d7245df80cb82e9440cb"
   solver-name = "gps-cdcl"
   solver-version = 1
