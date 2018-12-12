@@ -34,7 +34,7 @@ import (
 	listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/record"
-	backendconfigv1beta1 "k8s.io/ingress-gce/pkg/apis/backendconfig/v1beta1"
+	v1beta1 "k8s.io/ingress-gce/pkg/apis/cloud/v1beta1"
 	"k8s.io/ingress-gce/pkg/backends"
 	"k8s.io/ingress-gce/pkg/common/operator"
 	"k8s.io/ingress-gce/pkg/healthchecks"
@@ -188,19 +188,19 @@ func NewLoadBalancerController(
 	// BackendConfig event handlers.
 	ctx.BackendConfigInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		AddFunc: func(obj interface{}) {
-			beConfig := obj.(*backendconfigv1beta1.BackendConfig)
+			beConfig := obj.(*v1beta1.BackendConfig)
 			ings := operator.Ingresses(ctx.Ingresses().List()).ReferencesBackendConfig(beConfig, operator.Services(ctx.Services().List())).AsList()
 			lbc.ingQueue.Enqueue(convert(ings)...)
 		},
 		UpdateFunc: func(old, cur interface{}) {
 			if !reflect.DeepEqual(old, cur) {
-				beConfig := cur.(*backendconfigv1beta1.BackendConfig)
+				beConfig := cur.(*v1beta1.BackendConfig)
 				ings := operator.Ingresses(ctx.Ingresses().List()).ReferencesBackendConfig(beConfig, operator.Services(ctx.Services().List())).AsList()
 				lbc.ingQueue.Enqueue(convert(ings)...)
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			beConfig := obj.(*backendconfigv1beta1.BackendConfig)
+			beConfig := obj.(*v1beta1.BackendConfig)
 			ings := operator.Ingresses(ctx.Ingresses().List()).ReferencesBackendConfig(beConfig, operator.Services(ctx.Services().List())).AsList()
 			lbc.ingQueue.Enqueue(convert(ings)...)
 		},
