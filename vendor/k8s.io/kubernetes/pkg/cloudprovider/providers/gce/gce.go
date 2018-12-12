@@ -225,7 +225,7 @@ func init() {
 	cloudprovider.RegisterCloudProvider(
 		ProviderName,
 		func(config io.Reader) (cloudprovider.Interface, error) {
-			return newCloud(config)
+			return newGCECloud(config)
 		})
 }
 
@@ -252,8 +252,8 @@ func (g *Cloud) ContainerService() *container.Service {
 	return g.containerService
 }
 
-// newCloud creates a new instance of Cloud.
-func newCloud(config io.Reader) (gceCloud *Cloud, err error) {
+// newGCECloud creates a new instance of Cloud.
+func newGCECloud(config io.Reader) (gceCloud *Cloud, err error) {
 	var cloudConfig *CloudConfig
 	var configFile *ConfigFile
 
@@ -269,7 +269,7 @@ func newCloud(config io.Reader) (gceCloud *Cloud, err error) {
 	if err != nil {
 		return nil, err
 	}
-	return CreateCloud(cloudConfig)
+	return CreateGCECloud(cloudConfig)
 }
 
 func readConfig(reader io.Reader) (*ConfigFile, error) {
@@ -379,11 +379,11 @@ func generateCloudConfig(configFile *ConfigFile) (cloudConfig *CloudConfig, err 
 	return cloudConfig, err
 }
 
-// CreateCloud creates a Cloud object using the specified parameters.
+// CreateGCECloud creates a Cloud object using the specified parameters.
 // If no networkUrl is specified, loads networkName via rest call.
 // If no tokenSource is specified, uses oauth2.DefaultTokenSource.
 // If managedZones is nil / empty all zones in the region will be managed.
-func CreateCloud(config *CloudConfig) (*Cloud, error) {
+func CreateGCECloud(config *CloudConfig) (*Cloud, error) {
 	// Remove any pre-release version and build metadata from the semver,
 	// leaving only the MAJOR.MINOR.PATCH portion. See http://semver.org/.
 	version := strings.TrimLeft(strings.Split(strings.Split(version.Get().GitVersion, "-")[0], "+")[0], "v")
@@ -475,7 +475,7 @@ func CreateCloud(config *CloudConfig) (*Cloud, error) {
 		subnetURL = gceSubnetworkURL(config.APIEndpoint, netProjID, config.Region, config.SubnetworkName)
 	} else {
 		// Determine the type of network and attempt to discover the correct subnet for AUTO mode.
-		// Gracefully fail because kubelet calls CreateCloud without any config, and minions
+		// Gracefully fail because kubelet calls CreateGCECloud without any config, and minions
 		// lack the proper credentials for API calls.
 		if networkName := lastComponent(networkURL); networkName != "" {
 			var n *compute.Network

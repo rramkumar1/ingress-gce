@@ -38,7 +38,7 @@ import (
 	"google.golang.org/api/googleapi"
 )
 
-func fakeCloud(vals TestClusterValues) (*Cloud, error) {
+func fakeGCECloud(vals TestClusterValues) (*Cloud, error) {
 	gce := NewFakeGCECloud(vals)
 
 	gce.AlphaFeatureGate = NewAlphaFeatureGate([]string{})

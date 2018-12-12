@@ -120,7 +120,7 @@ func (g *Cloud) ensureInternalLoadBalancer(clusterName, clusterID string, svc *v
 		LoadBalancingScheme: string(scheme),
 	}
 
-	// Given that CreateCloud will attempt to determine the subnet based off the network,
+	// Given that CreateGCECloud will attempt to determine the subnet based off the network,
 	// the subnetwork should rarely be unknown.
 	if subnetworkURL != "" {
 		expectedFwdRule.Subnetwork = subnetworkURL
